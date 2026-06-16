@@ -11,9 +11,22 @@ import subprocess, os
 
 ROOT     = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC_MOV  = os.path.join(ROOT, "data",    "2026-l1-final-1st.mov")
-WHISTLES = os.path.join(ROOT, "results", "whistles.txt")
+WHISTLES = os.path.join(ROOT, "results", "whistles.txt")        # 自動検出(v2)
+EXTRA    = os.path.join(ROOT, "labels",  "ground_truth.tsv")    # 人手確認の教師データ
 FFMETA   = os.path.join(ROOT, "results", "chapters.ffmeta")
 OUT_MOV  = os.path.join(ROOT, "results", "2026-l1-final-1st_marked.mov")
+
+def read_times(path):
+    """秒(2列目)を返す。label列(4列目)がある場合は whistle のみ採用。
+    not_whistle 等の負例はマーカーにしない(教師データには残す)。"""
+    if not os.path.exists(path): return []
+    out = []
+    for l in open(path):
+        if l.startswith("#") or not l.strip(): continue
+        cols = l.split("\t")
+        if len(cols) >= 4 and cols[3].strip() != "whistle": continue
+        out.append(float(cols[1]))
+    return out
 
 def mov_duration(path):
     out = subprocess.run(["ffprobe","-v","error","-show_entries","format=duration",
@@ -21,8 +34,14 @@ def mov_duration(path):
     return float(out.stdout.strip())
 
 def main():
-    rows = [l.split("\t") for l in open(WHISTLES) if not l.startswith("#") and l.strip()]
-    times = [float(r[1]) for r in rows]
+    times = read_times(WHISTLES) + read_times(EXTRA)
+    # 時刻順にソートし、近接(2秒以内)の重複を除去
+    times.sort()
+    merged = []
+    for t in times:
+        if not merged or t - merged[-1] >= 2.0:
+            merged.append(t)
+    times = merged
     end = mov_duration(SRC_MOV)
     with open(FFMETA, "w") as f:
         f.write(";FFMETADATA1\n")

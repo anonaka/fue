@@ -1,83 +1,40 @@
 #!/usr/bin/env python3
-"""レフェリーの笛をwavから検出する。
+"""笛検出 (アンサンブル) — 本番用の候補生成器。
 
-笛は約1.7-2.5kHzの基本波 + 約2倍の倍音を持つ、持続した狭帯域トーン。
-観客ノイズ（広帯域）と区別するため、
-  (1) 基本波帯域のトーン性(エネルギー集中度)
-  (2) 倍音帯域との同時エネルギー
-  (3) 低域(観客)に対するコントラスト
-  (4) 一定時間の持続
-を組み合わせた3種の指標で検出し、合議でランク付けする。
+2つの専門家を併用して取りこぼしを減らす:
+  detect_whistle_v1 : 低域(群衆)対比 + 長め持続。持続した明瞭な笛に強い(高精度)
+  detect_whistle_v2 : 笛帯域の局所背景対比 + 短い持続。短い/群衆下の弱い笛に強い(高再現)
 
-使い方:  python3 detect_whistle.py [input.wav] [N]
-         input.wav 省略時は data/2026-l1-final-1st.wav
-         N        = 出力する上位件数 (既定20)
+どちらも単独では不完全(v1は短い笛を、v2は持続笛の一部を取り逃す)。両者の和集合を
+取ることで候補の再現率を上げる。ただし v2 は縦縞ノイズ等の誤検出も含むため、
+出力は「検証すべき候補」であり、最終確定にはスペクトログラム等での人手確認が要る。
+人手で確認した笛は labels/ground_truth.tsv に教師データとして蓄積する。
+
+使い方:  python3 detect_whistle.py [input.wav] [N_each]
+         各専門家から上位 N_each 件(既定25)を取り和集合を出力。
 """
-import subprocess, sys, os, numpy as np
-from numpy.lib.stride_tricks import sliding_window_view
-
+import sys, os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import detect_whistle_v1 as v1
+import detect_whistle_v2 as v2
 
-SR, NFFT, HOP = 12000, 1024, 256
-FPS = SR / HOP
-
-def load(path):
-    raw = subprocess.run(["ffmpeg","-v","error","-i",path,"-ac","1",
-                          "-ar",str(SR),"-f","s16le","-"],
-                         capture_output=True).stdout
-    return np.frombuffer(raw, dtype="<i2").astype(np.float32)/32768.0
-
-def spectrogram(x):
-    win = np.hanning(NFFT).astype(np.float32)
-    nf = 1 + (len(x)-NFFT)//HOP
-    freqs = np.fft.rfftfreq(NFFT, 1/SR)
-    mag = np.empty((nf, len(freqs)), np.float32)
-    for i in range(nf):
-        mag[i] = np.abs(np.fft.rfft(x[i*HOP:i*HOP+NFFT]*win))
-    return mag, freqs
-
-def rollmin(a, sec):
-    w = int(sec*FPS); pad = w//2
-    return sliding_window_view(np.pad(a,(pad,w-1-pad),mode="edge"), w).min(1)
-
-def events(score, t, pct=99.2, gap=1.0):
-    thr = np.percentile(score, pct); hot = np.where(score>thr)[0]; ev=[]
-    if len(hot):
-        s=p=hot[0]
-        for i in hot[1:]:
-            if (i-p)/FPS>gap: ev.append((s,p)); s=i
-            p=i
-        ev.append((s,p))
-    return [(t[a+score[a:b+1].argmax()], score[a+score[a:b+1].argmax()]) for a,b in ev]
-
-def detect(path, topn=20):
-    x = load(path); mag, freqs = spectrogram(x)
-    t = np.arange(mag.shape[0])*HOP/SR
-    bmax = lambda lo,hi: (mag[:,(freqs>=lo)&(freqs<=hi)].max(1),
-                          freqs[(freqs>=lo)&(freqs<=hi)][mag[:,(freqs>=lo)&(freqs<=hi)].argmax(1)])
-    floor = mag[:,(freqs>=150)&(freqs<=1300)].mean(1)+1e-9
-    f0e,f0f = bmax(1700,2500); h2e,_ = bmax(3500,5000)
-    tB = f0e/(mag[:,(freqs>=1700)&(freqs<=2500)].sum(1)+1e-9)
-    MA = mag[:,(freqs>=1800)&(freqs<=5000)]; pA = MA.max(1)
-    A = rollmin(pA*(pA/(MA.sum(1)+1e-9))*(pA/floor), 0.25)        # 帯域トーン
-    B = rollmin(np.sqrt(f0e*h2e)/floor*tB, 0.25)                  # ハーモニクス
-    C = rollmin(f0e/floor*tB, 0.30)                               # 基本波持続
-
-    def ranked(ev, N=30):
-        ev = sorted(ev, key=lambda r:-r[1])[:N]
-        return [(tt, N-i) for i,(tt,_) in enumerate(ev)]
-    cands = {}
-    for ev in (ranked(events(A,t)), ranked(events(B,t)), ranked(events(C,t))):
-        for tt,pts in ev:
-            key = next((k for k in cands if abs(k-tt)<1.2), None)
-            if key is None: cands[tt] = [pts,1,f0f[int(round(tt*FPS))]]
-            else: cands[key][0]+=pts; cands[key][1]+=1
-    final = sorted(([tt,*v] for tt,v in cands.items()), key=lambda r:(-r[2],-r[1]))
-    return sorted(final[:topn], key=lambda r:r[0])
+def detect(path, n_each=25):
+    # v1: (tt,pts,nd,ff) / v2: (tt,ff,pts,nd) — 時刻=index0 で正規化
+    items = [(r[0], r[3], "v1") for r in v1.detect(path, n_each)]      # (time, f0, src)
+    items += [(r[0], r[1], "v2") for r in v2.detect(path, n_each)]
+    items.sort()
+    merged = []   # (time, f0, sources)
+    for tt, ff, src in items:
+        if merged and tt - merged[-1][0] < 2.0:
+            merged[-1][2].add(src)
+        else:
+            merged.append([tt, ff, {src}])
+    return merged
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv)>1 else os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    topn = int(sys.argv[2]) if len(sys.argv)>2 else 20
-    print("# mm:ss\tseconds\tf0(Hz)")
-    for tt,pts,nd,ff in detect(path, topn):
-        print(f"{int(tt//60)}:{tt%60:05.2f}\t{tt:.2f}\t{ff:.0f}")
+    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "data", "2026-l1-final-1st.wav")
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else 25
+    print("# mm:ss\tseconds\tf0(Hz)\tsources")
+    for tt, ff, src in detect(path, n):
+        print(f"{int(tt//60)}:{tt%60:05.2f}\t{tt:.2f}\t{ff:.0f}\t{'+'.join(sorted(src))}")

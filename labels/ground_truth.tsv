@@ -1,0 +1,11 @@
+# 笛の教師データ (人手確認 ground truth)
+# 将来の音色ベース検出器(分類器/テンプレート相関)の学習・評価に使う
+# verified: human_ear=耳で確認 / spectrogram=スペクトログラム目視
+# label: whistle=笛(正例) / not_whistle=誤検出(負例)。not_whistle はマーカーにしない
+# 先頭3列は results/whistles.txt と同じ形式 (mm:ss / seconds / f0)
+# mm:ss	seconds	f0(Hz)	label	verified	note
+1:57.03	117.03	2227	whistle	human_ear	微弱(遠い笛)・群衆大・帯域内突出1.7倍でエネルギー検出不可
+2:01.34	121.34	1770	whistle	human_ear	短い笛
+2:40.73	160.73	2133	not_whistle	human_ear	誤検出。短いトーンだが笛でない(ハード負例)
+29:55.84	1795.84	1758	not_whistle	human_ear	誤検出。笛でない(ハード負例)
+30:11.99	1811.99	2062	whistle	human_ear	実際の吹鳴は30:12(突出5.5倍)。上位N外で自動リスト漏れ
