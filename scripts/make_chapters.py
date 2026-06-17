@@ -39,7 +39,7 @@ def main():
     times.sort()
     merged = []
     for t in times:
-        if not merged or t - merged[-1] >= 2.0:
+        if not merged or t - merged[-1] >= 1.0:  # 1秒差の連続した笛(例 16:26/16:27)は別々に残す
             merged.append(t)
     times = merged
     end = mov_duration(SRC_MOV)

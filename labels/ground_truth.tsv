@@ -1,11 +1,53 @@
-# 笛の教師データ (人手確認 ground truth)
-# 将来の音色ベース検出器(分類器/テンプレート相関)の学習・評価に使う
-# verified: human_ear=耳で確認 / spectrogram=スペクトログラム目視
-# label: whistle=笛(正例) / not_whistle=誤検出(負例)。not_whistle はマーカーにしない
-# 先頭3列は results/whistles.txt と同じ形式 (mm:ss / seconds / f0)
+# 笛の正解データ (ground truth) — 全編を人手で聴いて記録
+# 正例48 + 負例(誤検出)。将来の音色ベース検出器の学習・評価に使う
+# label: whistle=笛 / not_whistle=誤検出。 note: detected+human=検出器一致 / human_only=検出器見逃し / human+measured=精密実測
 # mm:ss	seconds	f0(Hz)	label	verified	note
-1:57.03	117.03	2227	whistle	human_ear	微弱(遠い笛)・群衆大・帯域内突出1.7倍でエネルギー検出不可
-2:01.34	121.34	1770	whistle	human_ear	短い笛
-2:40.73	160.73	2133	not_whistle	human_ear	誤検出。短いトーンだが笛でない(ハード負例)
-29:55.84	1795.84	1758	not_whistle	human_ear	誤検出。笛でない(ハード負例)
-30:11.99	1811.99	2062	whistle	human_ear	実際の吹鳴は30:12(突出5.5倍)。上位N外で自動リスト漏れ
+0:33.90	33.90	2168	whistle	human_ear	detected+human
+1:57.03	117.03	2227	whistle	human_ear	human+measured
+2:01.34	121.34	1770	whistle	human_ear	human+measured
+2:40.73	160.73	2133	whistle	human_ear	human+measured
+3:42.00	222.00	-	whistle	human_ear	human_only
+3:54.56	234.56	2086	whistle	human_ear	detected+human
+5:14.00	314.00	-	whistle	human_ear	human_only
+6:05.00	365.00	-	whistle	human_ear	human_only
+7:04.00	424.00	-	whistle	human_ear	human_only
+8:51.11	531.11	2250	whistle	human_ear	detected+human
+9:54.01	594.01	2191	whistle	human_ear	detected+human
+11:35.00	695.00	-	whistle	human_ear	human_only
+12:00.94	720.94	2004	whistle	human_ear	detected+human
+12:39.00	759.00	-	whistle	human_ear	human_only
+13:22.13	802.13	2039	whistle	human_ear	detected+human
+15:28.64	928.64	1887	whistle	human_ear	detected+human
+15:33.59	933.59	1875	whistle	human_ear	detected+human
+16:25.34	985.34	1840	whistle	human_ear	detected+human
+16:27.00	987.00	-	whistle	human_ear	human_only
+17:21.00	1041.00	-	whistle	human_ear	human_only
+18:48.51	1128.51	1852	whistle	human_ear	detected+human
+19:07.00	1147.00	-	whistle	human_ear	human_only
+19:54.00	1194.00	-	whistle	human_ear	human_only
+20:01.00	1201.00	-	whistle	human_ear	human_only
+20:18.00	1218.00	-	whistle	human_ear	human_only
+21:52.68	1312.68	1840	whistle	human_ear	detected+human
+22:16.00	1336.00	-	whistle	human_ear	human_only
+23:11.00	1391.00	-	whistle	human_ear	human_only
+23:57.00	1437.00	-	whistle	human_ear	human_only
+25:40.46	1540.46	1852	whistle	human_ear	detected+human
+26:43.00	1603.00	-	whistle	human_ear	human_only
+27:31.00	1651.00	-	whistle	human_ear	human_only
+28:39.00	1719.00	-	whistle	human_ear	human_only
+29:55.84	1795.84	1758	not_whistle	human_ear	29:55の誤検出(ハード負例)
+30:11.99	1811.99	2062	whistle	human_ear	human+measured
+30:39.23	1839.23	1922	whistle	human_ear	detected+human
+32:56.00	1976.00	2156	whistle	human_ear	detected+human
+33:24.00	2004.00	-	whistle	human_ear	human_only
+34:27.00	2067.00	-	whistle	human_ear	human_only
+35:43.74	2143.74	2039	whistle	human_ear	detected+human
+37:11.32	2231.32	2016	whistle	human_ear	detected+human
+37:46.00	2266.00	-	whistle	human_ear	human_only
+38:35.78	2315.78	2238	whistle	human_ear	detected+human
+38:45.00	2325.00	-	whistle	human_ear	human_only
+40:37.70	2437.70	1992	whistle	human_ear	detected+human
+42:03.46	2523.46	2016	whistle	human_ear	detected+human
+42:27.00	2547.00	-	whistle	human_ear	human_only
+43:18.00	2598.00	-	whistle	human_ear	human_only
+44:03.84	2643.84	1980	whistle	human_ear	detected+human
