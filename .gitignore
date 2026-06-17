@@ -10,3 +10,7 @@ results/*.png
 # Python キャッシュ
 __pycache__/
 *.pyc
+
+# レビューツールの生成物
+results/*.html
+*labels_review*.tsv

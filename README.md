@@ -23,6 +23,10 @@ scripts/                       処理スクリプト
   detect_whistle_v1.py           専門家1: 低域(群衆)対比+長め持続。明瞭な笛に強い(高精度)
   detect_whistle_v2.py           専門家2: 笛帯域の局所背景対比+短い持続。短い/弱い笛に強い(高再現)
   evaluate.py                    検出器を labels/ground_truth.tsv で評価(P/R/F1曲線)
+  classify.py                    音色ベース分類器で候補を再ランク(交差検証で評価)
+  make_review.py                 教師データ作成支援: 候補レビュー用HTMLを生成
+  import_labels.py               レビュー結果のラベルTSVを ground_truth.tsv に取込
+  preprocess.py                  HPSS前処理(実験用・未採用。NOTES.md参照)
   make_chapters.py               whistles.txt + 教師データ から marked.mov を生成
 ```
 
@@ -39,8 +43,25 @@ python3 scripts/make_chapters.py
 ```
 
 `make_chapters.py` は `results/whistles.txt`(確定リスト) と `labels/ground_truth.tsv`(人手確認の
-教師データ)をマージし、時刻順にソート・近接重複(2秒以内)を除去してマーカーを作る。自動検出で
+教師データ)をマージし、時刻順にソート・近接重複(1秒以内)を除去してマーカーを作る。自動検出で
 拾えない笛(下記)は教師データに追記すればマーカーに反映される(再検出で whistles.txt を上書きしても消えない)。
+
+## 教師データ作成 (別試合のラベル付け)
+
+全編を聴く代わりに、検出器の高再現な候補だけをレビューして効率的にラベル付けする:
+
+```bash
+# 1) 候補レビュー用HTMLを生成 (各候補に音声クリップ+スペクトログラムを埋込)
+python3 scripts/make_review.py 別試合.wav            # -> results/review.html
+open results/review.html
+#    ブラウザでキーボード操作: W=笛 / N=非笛 / U=保留, Space=再生, ↑↓=移動
+#    終わったら「エクスポート」で labels_review.tsv をダウンロード
+
+# 2) ラベルを教師データに取り込む
+python3 scripts/import_labels.py ~/Downloads/labels_review.tsv labels/別試合_gt.tsv
+```
+
+候補は再現率上限90%なので大半をカバーする。見逃し分(約10%)は教師データへ手動追記する。
 
 ## 検出方式
 
