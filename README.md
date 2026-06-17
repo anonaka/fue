@@ -39,7 +39,9 @@ python3 scripts/detect_whistle.py > /tmp/candidates.tsv
 #    確認のうえ results/whistles.txt を編集して確定リストにする。
 
 # 2) whistles.txt + labels/ground_truth.tsv を元にマーカー付き動画を生成:
-python3 scripts/make_chapters.py
+python3 scripts/make_chapters.py        # 前半
+python3 scripts/make_chapters.py 2nd    # 後半(プリセット)
+#   任意: make_chapters.py <src.mov> <out.mov> <labels.tsv>...
 ```
 
 `make_chapters.py` は `results/whistles.txt`(確定リスト) と `labels/ground_truth.tsv`(人手確認の
