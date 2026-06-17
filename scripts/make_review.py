@@ -13,9 +13,22 @@
 import os, sys, base64, subprocess, html
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import numpy as np
 import detect_whistle as D
+import detect_whistle_v2 as V2
 
-CLIP=2.5; SPEC_W,SPEC_H=380,200
+CLIP=4.0; SPEC_W,SPEC_H=460,200
+REFINE_WIN=2.5   # 候補の±この秒数内で笛帯域のピークに中心を合わせ直す
+
+def refine_time(mag,freqs,t):
+    """候補t周辺で「笛帯域(1700-2600Hz)の最もトーン的に強いフレーム」に中心を合わせ直す。
+    候補の時刻が実際の笛と数秒ずれていてもクリップが笛を捉えられるようにする。"""
+    fps=V2.FPS; c=int(t*fps); w=int(REFINE_WIN*fps)
+    a,b=max(0,c-w),min(mag.shape[0],c+w)
+    if b<=a: return t
+    band=(freqs>=1700)&(freqs<=2600); M=mag[a:b,band]
+    pk=M.max(1); tonal=pk/(M.sum(1)+1e-9)
+    return (a+int((pk*tonal).argmax()))/fps
 
 def clip_mp3(path,ts):
     ss=max(0,ts-CLIP/2)
@@ -31,9 +44,18 @@ def spec_jpg(path,ts):
 def main(path,N,out):
     cands=D.candidates(path)
     if N: cands=cands[:N]
-    print(f"{len(cands)} 候補をレンダリング中...",file=sys.stderr)
+    print(f"{len(cands)} 候補: スペクトログラム計算→ピーク中心合わせ...",file=sys.stderr)
+    mag,freqs=V2.spectrogram(V2.load(path))   # ピーク中心合わせ用
+    # 各候補を笛帯域ピークに中心合わせ。ただし既に割当済みの時刻に近づく場合は
+    # 元の時刻を保持し、近接した別々の笛(例 16:26/16:27)が統合されるのを防ぐ。
+    refts=[]; assigned=[]
+    for (t0,f0,sc,src) in cands:
+        rt=refine_time(mag,freqs,t0)
+        if any(abs(rt-a)<1.2 for a in assigned): rt=t0
+        assigned.append(rt); refts.append(rt)
+    print(f"レンダリング中...",file=sys.stderr)
     cards=[]; js=[]
-    for i,(t,f0,sc,src) in enumerate(cands):
+    for i,((t0,f0,sc,src),t) in enumerate(zip(cands,refts)):
         mp3=base64.b64encode(clip_mp3(path,t)).decode()
         jpg=base64.b64encode(spec_jpg(path,t)).decode()
         mmss=f"{int(t//60)}:{t%60:05.2f}"; srcs="+".join(sorted(src))
