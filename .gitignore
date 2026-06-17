@@ -14,3 +14,10 @@ __pycache__/
 # レビューツールの生成物
 results/*.html
 *labels_review*.tsv
+
+# LaTeX ビルド生成物
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/paper.pdf
+docs/aaa
