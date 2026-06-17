@@ -49,5 +49,5 @@
 40:37.70	2437.70	1992	whistle	human_ear	detected+human
 42:03.46	2523.46	2016	whistle	human_ear	detected+human
 42:27.00	2547.00	-	whistle	human_ear	human_only
-43:18.00	2598.00	-	whistle	human_ear	human_only
+43:18.00	2598.00	-	not_whistle	human_ear	数え過ぎ。クリップ精査で笛でないと確認(ハード負例)
 44:03.84	2643.84	1980	whistle	human_ear	detected+human
