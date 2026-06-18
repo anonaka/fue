@@ -11,6 +11,9 @@ results/*.png
 __pycache__/
 *.pyc
 
+# uv 仮想環境 (uv.lock はコミットする)
+.venv/
+
 # レビューツールの生成物
 results/*.html
 *labels_review*.tsv

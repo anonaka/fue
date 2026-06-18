@@ -30,17 +30,27 @@ scripts/                       処理スクリプト
   make_chapters.py               whistles.txt + 教師データ から marked.mov を生成
 ```
 
+## セットアップ
+
+依存パッケージは [uv](https://docs.astral.sh/uv/) で管理する。`uv run` が初回に仮想環境を
+自動作成・同期するため、明示的なインストールは不要(各スクリプトを `uv run` で実行するだけ)。
+音声の読み込みには別途 `ffmpeg` が必要。
+
+```bash
+uv sync   # 任意: 事前に .venv を作って依存を入れておく
+```
+
 ## 使い方
 
 ```bash
 # 1) 笛の候補を検出 (v1とv2の和集合)。sources列で各専門家の検出が分かる:
-python3 scripts/detect_whistle.py > /tmp/candidates.tsv
+uv run scripts/detect_whistle.py > /tmp/candidates.tsv
 #    sources=v1+v2 は両者一致で高信頼。v2単独は誤検出(縦縞ノイズ等)を含むので要確認。
 #    確認のうえ results/whistles.txt を編集して確定リストにする。
 
 # 2) whistles.txt + labels/ground_truth.tsv を元にマーカー付き動画を生成:
-python3 scripts/make_chapters.py        # 前半
-python3 scripts/make_chapters.py 2nd    # 後半(プリセット)
+uv run scripts/make_chapters.py        # 前半
+uv run scripts/make_chapters.py 2nd    # 後半(プリセット)
 #   任意: make_chapters.py <src.mov> <out.mov> <labels.tsv>...
 ```
 
@@ -54,13 +64,13 @@ python3 scripts/make_chapters.py 2nd    # 後半(プリセット)
 
 ```bash
 # 1) 候補レビュー用HTMLを生成 (各候補に音声クリップ+スペクトログラムを埋込)
-python3 scripts/make_review.py 別試合.wav            # -> results/review.html
+uv run scripts/make_review.py 別試合.wav            # -> results/review.html
 open results/review.html
 #    ブラウザでキーボード操作: W=笛 / N=非笛 / U=保留, Space=再生, ↑↓=移動
 #    終わったら「エクスポート」で labels_review.tsv をダウンロード
 
 # 2) ラベルを教師データに取り込む
-python3 scripts/import_labels.py ~/Downloads/labels_review.tsv labels/別試合_gt.tsv
+uv run scripts/import_labels.py ~/Downloads/labels_review.tsv labels/別試合_gt.tsv
 ```
 
 候補は再現率上限90%なので大半をカバーする。見逃し分(約10%)は教師データへ手動追記する。
@@ -80,7 +90,7 @@ python3 scripts/import_labels.py ~/Downloads/labels_review.tsv labels/別試合_
 
 ### 性能 (labels/ground_truth.tsv = 笛48個 で評価, 許容±4s)
 
-`python3 scripts/evaluate.py` でP/R/F1曲線を出せる。上位N件を採るときの動作点:
+`uv run scripts/evaluate.py` でP/R/F1曲線を出せる。上位N件を採るときの動作点:
 
 | N | precision | recall | F1 |
 |---|-----------|--------|-----|

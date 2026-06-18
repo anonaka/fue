@@ -1,0 +1,13 @@
+[project]
+name = "fue"
+version = "0.1.0"
+description = "レフェリーの笛 検出 — ラグビー試合動画から笛の時刻を検出してチャプター化"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "matplotlib>=3.8",
+]
+
+[tool.uv]
+package = false
