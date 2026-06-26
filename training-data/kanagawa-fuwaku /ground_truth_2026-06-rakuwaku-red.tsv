@@ -1,0 +1,21 @@
+# 笛の正解データ (ground truth) — video-comment-system から書き出し
+# 試合: 2026年6月 楽惑倶楽部赤パン戦 (神奈川不惑 vs 楽惑倶楽部, YouTube nsumARbuzJc)
+# ★ 最初の10分(0:00-10:00)のみラベル済み。評価は seconds<600 に限定すること。
+# label: whistle=笛 / not_whistle=誤検出。 note: detected+human / human_only / review
+# mm:ss	seconds	f0(Hz)	label	verified	note
+0:52.39	52.39	-	whistle	human_ear	human_only
+1:44.51	104.51	-	whistle	human_ear	human_only
+2:36.79	156.79	-	whistle	human_ear	human_only
+2:53.96	173.96	-	whistle	human_ear	human_only
+3:14.64	194.64	-	whistle	human_ear	human_only
+3:27.33	207.33	-	whistle	human_ear	human_only
+4:07.51	247.51	-	whistle	human_ear	human_only
+4:24.24	264.24	-	whistle	human_ear	human_only
+4:39.78	279.78	-	whistle	human_ear	human_only
+4:47.81	287.81	-	whistle	human_ear	human_only
+5:17.05	317.05	-	whistle	human_ear	human_only
+5:24.75	324.75	-	whistle	human_ear	human_only
+6:10.46	370.46	-	whistle	human_ear	human_only
+6:44.68	404.68	-	whistle	human_ear	human_only
+9:04.14	544.14	-	whistle	human_ear	human_only
+9:37.12	577.12	-	whistle	human_ear	human_only
