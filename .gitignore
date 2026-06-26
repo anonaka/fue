@@ -27,3 +27,7 @@ docs/*.log
 docs/*.out
 docs/paper.pdf
 docs/aaa
+
+# 秘密(コミット禁止)
+freesound_api_key.txt
+*.key

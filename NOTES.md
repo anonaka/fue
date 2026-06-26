@@ -350,4 +350,13 @@ synthesize.py のテンプレを「クリーンな笛」に替えると改善す
   Freesoundの笛も合成トーンも別ドメインで、群衆混じりでも in-domain 抽出テンプレに負ける(PANNs失敗と同根)。
 - 結論: 汎用クリーンバンクは不採用。synthesize.py は in-domain 抽出テンプレのまま。合成を良くする道は「同一ドメインの笛を増やす=より多くの jinwaku 試合をラベル」。
 - Freesoundサンプルは `assets/whistles/`(ATTRIBUTION.tsv付き, wavはgitignore)に残置。汎用検出/負例用途には使える可能性。
-- 残: 分類器の本番(fue.detect)組込み、複数試合での in-domain 拡充。
+
+### 分類器を本番(fue.detect)に組込み → ◎ 完了
+これまで分類器は研究(cv_amateur)だけで、アプリは候補生成(ridge)のみだった。production に組込み:
+- `detect_v3.feature_vectors`(8特徴 = cv_amateur の7 + ステレオ centering)、`train_classifier`/`classify`/`save_model`/`load_model`、
+  `detect_scored(path, model)`(ステレオで候補生成 → 確率で再ランク) を detect_v3 に追加。
+- `scripts/train_classifier.py`: 実試合(ステレオ音源+正解tsv, `:dur`でトリム可)と合成npz(`--synth`)から学習し npz 保存。
+- `fue/__init__.py`: `models/whistle_clf.npz`(env `FUE_WHISTLE_MODEL` で差替可)があれば v3 の confidence を **whistle probability** にする。無ければ従来の ridge p95。ensemble は p95 のまま。
+- 学習済みモデル同梱: 黄(実)+赤10分(実)+合成(synthesize.py) = 818例(正296/負522)で学習し `models/whistle_clf.npz` を commit。
+  アプリ(video-comment-system)の笛検出が確率で並ぶようになった(実笛 52.4s→prob 0.87 等)。
+- 残: 複数試合での in-domain 拡充(精度の本丸)、ホールドアウトでの本番精度測定、合成データの本格化(クリーンバンクは不可と判明)。

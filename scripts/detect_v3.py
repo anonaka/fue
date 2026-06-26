@@ -161,6 +161,71 @@ def candidates(path=None, params=None, mag=None, freqs=None, side_mag=None):
     out.sort(key=lambda r:-r[2])
     return out
 
+# ---- 音色分類器 (production): 候補を whistle probability で再ランクする ----
+FEAT = ["log_ridge","onset","dur","tonal","low_ratio","log_harm","f0","centering"]
+
+def feature_vectors(cands, mag, freqs, side_mag=None, params=None):
+    """候補ごとの音色特徴 (N,8): log_ridge/onset/dur/tonal/low_ratio/log_harm/f0/centering。
+    side_mag を渡すと centering(横/中央) を入れる(mono は 0)。"""
+    p = dict(DEFAULTS)
+    if params: p.update(params)
+    R, band_f = ridge_map(mag, freqs, p)
+    s = R.max(1); T = mag.shape[0]; do = int(0.12*FPS)
+    wsel = (freqs>=p["band_lo"]) & (freqs<=p["band_hi"]); lowsel = (freqs>=150) & (freqs<=1200)
+    bandsum = mag[:,wsel].sum(1)+1e-9; bandpeak = mag[:,wsel].max(1); lowsum = mag[:,lowsel].sum(1)
+    sm = np.zeros(T)
+    if side_mag is not None:
+        n = min(T, side_mag.shape[0]); sm[:n] = side_mag[:n,wsel].sum(1)/bandsum[:n]
+    X = []
+    for tt, f0, sc in cands:
+        fr = min(max(int(round(tt*FPS)), 0), T-1)
+        on = s[fr] - (s[fr-do] if fr-do >= 0 else s[fr])
+        thr = 0.4*s[fr]; i = fr; nn = 0
+        while i < T and s[i] > thr: nn += 1; i += 1
+        i = fr-1
+        while i >= 0 and s[i] > thr: nn += 1; i -= 1
+        dur = nn/FPS
+        ton = bandpeak[fr]/bandsum[fr]; low = lowsum[fr]/bandsum[fr]
+        hf = 2*f0
+        if p["band_lo"] <= hf <= p["band_hi"]:
+            harm = R[fr, int(np.argmin(np.abs(band_f-hf)))]
+        else:
+            harm = mag[fr, int(np.argmin(np.abs(freqs-hf)))]/(mag[fr, int(np.argmin(np.abs(freqs-f0)))]+1e-9)
+        X.append([np.log(sc+1), on, dur, ton, low, np.log(harm+1), f0/2500.0, np.log1p(sm[fr])])
+    return np.array(X)
+
+def train_classifier(X, y, iters=5000, lr=0.3, l2=1.0):
+    mu = X.mean(0); sd = X.std(0)+1e-9; Xs = np.c_[np.ones(len(X)), (X-mu)/sd]; w = np.zeros(Xs.shape[1])
+    for _ in range(iters):
+        pr = 1/(1+np.exp(-Xs@w)); g = Xs.T@(pr-y)/len(y); g[1:] += l2*w[1:]/len(y); w -= lr*g
+    return dict(w=w, mu=mu, sd=sd)
+
+def classify(X, model):
+    Xs = np.c_[np.ones(len(X)), (X-model["mu"])/model["sd"]]
+    return 1/(1+np.exp(-Xs@model["w"]))
+
+def save_model(model, path): np.savez(path, w=model["w"], mu=model["mu"], sd=model["sd"])
+def load_model(path):
+    d = np.load(path); return dict(w=d["w"], mu=d["mu"], sd=d["sd"])
+
+def detect_scored(path, model=None, params=None):
+    """ステレオで候補生成し、model があれば whistle probability を value に、無ければ ridge スコアを返す。
+    [(time, f0, value), ...] を高value順で返す。"""
+    p = dict(DEFAULTS)
+    if params: p.update(params)
+    mid, side = load_stereo(path)
+    mag, freqs = spectrogram(mid)
+    global PROGRESS
+    _saved, PROGRESS = PROGRESS, None         # side のスペクトログラムは進捗に出さない
+    try: side_mag, _ = spectrogram(side)
+    finally: PROGRESS = _saved
+    cands = candidates(mag=mag, freqs=freqs, side_mag=side_mag, params=p)
+    if model is None: return cands
+    pr = classify(feature_vectors(cands, mag, freqs, side_mag, p), model)
+    out = [(cands[i][0], cands[i][1], float(pr[i])) for i in range(len(cands))]
+    out.sort(key=lambda r: -r[2])
+    return out
+
 if __name__=="__main__":
     if len(sys.argv)<2: sys.exit("使い方: python3 detect_v3.py <input.wav> [N]")
     n=int(sys.argv[2]) if len(sys.argv)>2 else 40
