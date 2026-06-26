@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""検出器を正解データ(labels/ground_truth.tsv)で評価する。
+"""検出器を正解データで評価する。
 
 候補リスト(時刻,スコア順)を受け取り、上位Nを増やしながら
 TP/FP/FN・precision/recall/F1 を計算する。
+
+使い方:  python3 evaluate.py <input.wav> <ground_truth.tsv>
+  解析する試合ごとに wav と正解tsv を引数で渡す。
 """
 import os, sys
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-GT=os.path.join(ROOT,"labels","ground_truth.tsv")
 TOL=4.0
 
-def load_gt():
+def load_gt(gt):
     pos=[]
-    for l in open(GT):
+    for l in open(gt):
         if l.startswith("#") or not l.strip(): continue
         c=l.split("\t")
         if len(c)>=4 and c[3].strip()=="whistle": pos.append(float(c[1]))
@@ -39,11 +41,10 @@ def curve(cand_times, gt, Ns=None):
         rows.append((N,tp,fp,fn,P,R,F))
     return rows
 
-def main(path=None):
+def main(path, gt_path):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import detect_whistle as D
-    if path is None: path=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    gt=load_gt()
+    gt=load_gt(gt_path)
     cand=D.candidates(path); times=[c[0] for c in cand]
     _,used=match(times,gt)
     print(f"正解 {len(gt)}個 / 候補 {len(cand)}個 / 上限recall {sum(used)}/{len(gt)}={sum(used)/len(gt)*100:.0f}%  (許容±{TOL}s)")
@@ -55,4 +56,5 @@ def main(path=None):
     print(f"F1最良: N={bestF[0]} (F1={bestF[1]*100:.0f}%)")
 
 if __name__=="__main__":
-    main(sys.argv[1] if len(sys.argv)>1 else None)
+    if len(sys.argv)<3: sys.exit("使い方: python3 evaluate.py <input.wav> <ground_truth.tsv>")
+    main(sys.argv[1], sys.argv[2])

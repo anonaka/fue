@@ -9,9 +9,8 @@
   (4) 一定時間の持続
 を組み合わせた3種の指標で検出し、合議でランク付けする。
 
-使い方:  python3 detect_whistle.py [input.wav] [N]
-         input.wav 省略時は data/2026-l1-final-1st.wav
-         N        = 出力する上位件数 (既定20)
+使い方:  python3 detect_whistle_v1.py <input.wav> [N]
+         N = 出力する上位件数 (既定20)
 """
 import subprocess, sys, os, numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
@@ -20,6 +19,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 SR, NFFT, HOP = 12000, 1024, 256
 FPS = SR / HOP
+
+# 進捗通知フック。呼び出し側が PROGRESS = func(done, total) を設定すると、
+# spectrogram の計算中に進捗が通知される（既定 None なら何もしない）。
+PROGRESS = None
 
 def load(path):
     raw = subprocess.run(["ffmpeg","-v","error","-i",path,"-ac","1",
@@ -34,6 +37,10 @@ def spectrogram(x):
     mag = np.empty((nf, len(freqs)), np.float32)
     for i in range(nf):
         mag[i] = np.abs(np.fft.rfft(x[i*HOP:i*HOP+NFFT]*win))
+        if PROGRESS is not None and (i & 0x3FF) == 0:
+            PROGRESS(i, nf)
+    if PROGRESS is not None:
+        PROGRESS(nf, nf)
     return mag, freqs
 
 def rollmin(a, sec):
@@ -76,7 +83,8 @@ def detect(path, topn=20):
     return sorted(final[:topn], key=lambda r:r[0])
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv)>1 else os.path.join(ROOT,"data","2026-l1-final-1st.wav")
+    if len(sys.argv)<2: sys.exit("使い方: python3 detect_whistle_v1.py <input.wav> [N]")
+    path = sys.argv[1]
     topn = int(sys.argv[2]) if len(sys.argv)>2 else 20
     print("# mm:ss\tseconds\tf0(Hz)")
     for tt,pts,nd,ff in detect(path, topn):

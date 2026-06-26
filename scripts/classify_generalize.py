@@ -2,8 +2,9 @@
 """分類器の汎化検証: 前半で学習し後半でテストする(別試合への転移)。
 
 前半候補(正解で笛/非笛ラベル)で音色分類器を学習し、後半候補に適用。
-後半の正解(labels/ground_truth_2nd.tsv)で precision/recall/F1 を測り、
-合議スコア順(baseline)と比較する。
+後半(テスト)の正解で precision/recall/F1 を測り、合議スコア順(baseline)と比較する。
+
+使い方: python3 classify_generalize.py <train.wav> <train_gt.tsv> <test.wav> <test_gt.tsv>
 """
 import os,sys,numpy as np
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,11 +39,9 @@ def curve(order_times,gt,tag):
     print(f"  F1最良 N={N}: TP={tp} FP={fp} prec={P*100:.0f}% rec={R*100:.0f}% F1={F*100:.0f}%")
     return best
 
-def main():
-    w1=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    w2=os.path.join(ROOT,"data","2026-l1-final-2nd.wav")
-    gt1=gt_whistles(os.path.join(ROOT,"labels","ground_truth.tsv"))
-    gt2=gt_whistles(os.path.join(ROOT,"labels","ground_truth_2nd.tsv"))
+def main(w1, gt1_path, w2, gt2_path):
+    gt1=gt_whistles(gt1_path)
+    gt2=gt_whistles(gt2_path)
     print(f"前半 笛{len(gt1)} / 後半 笛{len(gt2)}",file=sys.stderr)
     print("前半(学習)読込...",file=sys.stderr); c1,X1,y1=load_set(w1,gt1)
     print("後半(テスト)読込...",file=sys.stderr); c2,X2,y2=load_set(w2,gt2)
@@ -54,4 +53,6 @@ def main():
     order=[t2[i] for i in np.argsort(-s2)]
     curve(order,gt2,"分類器(前半で学習→後半に適用)")
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    if len(sys.argv)<5: sys.exit("使い方: python3 classify_generalize.py <train.wav> <train_gt.tsv> <test.wav> <test_gt.tsv>")
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

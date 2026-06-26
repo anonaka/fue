@@ -4,7 +4,7 @@
 review.html の「エクスポート」で得た labels_review.tsv を、指定の教師データに
 マージする(時刻が±1.5s以内の既存行は上書きせず保持、新規のみ追加、時刻順にソート)。
 
-使い方: python3 import_labels.py <labels_review.tsv> [target_ground_truth.tsv]
+使い方: python3 import_labels.py <labels_review.tsv> <target_ground_truth.tsv>
 """
 import os, sys
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -34,7 +34,5 @@ def main(src,dst):
     print(f"{added}件追加 / 合計{len(cur)}件 -> {dst}")
 
 if __name__=="__main__":
-    if len(sys.argv)<2: print("usage: import_labels.py <labels_review.tsv> [target.tsv]"); sys.exit(1)
-    src=sys.argv[1]
-    dst=sys.argv[2] if len(sys.argv)>2 else os.path.join(ROOT,"labels","ground_truth.tsv")
-    main(src,dst)
+    if len(sys.argv)<3: sys.exit("使い方: python3 import_labels.py <labels_review.tsv> <target_gt.tsv>")
+    main(sys.argv[1], sys.argv[2])

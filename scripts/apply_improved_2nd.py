@@ -38,11 +38,9 @@ def long_f1(times_kept, longs, all_gt):
     P=hitany/len(times_kept); R=rl/len(longs); F=2*P*R/(P+R) if P+R else 0
     return P,R,F
 
-def main():
-    w1=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    w2=os.path.join(ROOT,"data","2026-l1-final-2nd.wav")
-    gt1=gt_whistles(os.path.join(ROOT,"labels","ground_truth.tsv"))
-    gt2=gt_whistles(os.path.join(ROOT,"labels","ground_truth_2nd.tsv"))
+def main(w1, gt1_path, w2, gt2_path):
+    gt1=gt_whistles(gt1_path)
+    gt2=gt_whistles(gt2_path)
 
     # --- 前半: 学習 + しきい値選定 ---
     print("前半 学習中...",file=sys.stderr)
@@ -85,8 +83,9 @@ def main():
           sum(any(abs(g-t)<TOL for t in dt) for g in longs2),len(longs2),rall,len(gt2)))
     print("長笛運用 P/R/F1 = %.0f%% / %.0f%% / %.0f%%"%(P*100,R*100,F*100))
 
-    # --- TSV 出力 ---
-    out=os.path.join(ROOT,"results","whistles_2nd_improved.tsv")
+    # --- TSV 出力 (テスト試合と同じフォルダ) ---
+    base=os.path.splitext(os.path.basename(w2))[0]
+    out=os.path.join(os.path.dirname(w2),"whistles_%s_improved.tsv"%base)
     with open(out,"w") as fo:
         fo.write("# 改良版(長笛運用)で後半に適用した検出結果。前半学習→p>=%.2f採用。\n"%thr)
         fo.write("# mm:ss\tseconds\tf0(Hz)\tlabel\tverified\tnote\n")
@@ -95,4 +94,6 @@ def main():
             fo.write("%d:%05.2f\t%.2f\t%.0f\twhistle\tauto\tp=%.2f\n"%(mm,ss,t,f0,pr))
     print("\n出力: %s (%d件)"%(out,len(det)))
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    if len(sys.argv)<5: sys.exit("使い方: python3 apply_improved_2nd.py <train.wav> <train_gt.tsv> <test.wav> <test_gt.tsv>")
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

@@ -7,8 +7,8 @@
 を埋め込んだ自己完結HTMLを出力。ブラウザでキーボード操作(w=笛/n=非笛/u=保留)で
 高速にラベル付けし、labels/ground_truth.tsv 形式でエクスポートできる。
 
-使い方: python3 make_review.py [in.wav] [N] [out.html]
-        N=レビューする候補数(既定=全部), out=出力HTML(既定 results/review.html)
+使い方: python3 make_review.py <in.wav> <out.html> [N]
+        N=レビューする候補数(既定=全部)。out は in.wav と同じ試合フォルダに置く。
 """
 import os, sys, base64, subprocess, html
 ROOT=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -145,7 +145,8 @@ C.forEach((_,i)=>paint(i));focusCard(0);
 </script></body></html>"""
 
 if __name__=="__main__":
-    path=sys.argv[1] if len(sys.argv)>1 else os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    N=int(sys.argv[2]) if len(sys.argv)>2 and sys.argv[2]!="0" else None
-    out=sys.argv[3] if len(sys.argv)>3 else os.path.join(ROOT,"results","review.html")
+    if len(sys.argv)<3: sys.exit("使い方: python3 make_review.py <in.wav> <out.html> [N]")
+    path=sys.argv[1]
+    out=sys.argv[2]
+    N=int(sys.argv[3]) if len(sys.argv)>3 and sys.argv[3]!="0" else None
     main(path,N,out)

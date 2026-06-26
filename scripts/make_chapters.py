@@ -1,26 +1,16 @@
 #!/usr/bin/env python3
 """検出した笛の時刻を mov にチャプターマーカーとして埋め込む。
 
-ラベルTSV(whistle行)の時刻を読み、chapters.ffmeta を生成し、
+ラベルTSV(whistle行)の時刻を読み、chapters_<stem>.ffmeta を生成し、
 ffmpeg のストリームコピー(再エンコードなし)でマーカー付き mov を作成する。
+出力(ffmeta / marked.mov)は out.mov と同じフォルダに置かれる。
 
 使い方:
-  python3 make_chapters.py                       # 前半(既定)
-  python3 make_chapters.py 2nd                   # 後半(プリセット)
   python3 make_chapters.py <src.mov> <out.mov> <labels1.tsv> [labels2.tsv ...]
 """
 import subprocess, os, sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-def P(*a): return os.path.join(ROOT, *a)
-
-# ハーフごとのプリセット (src_mov, out_mov, [ラベルTSV...])
-PRESETS = {
-    "1st": (P("data","2026-l1-final-1st.mov"), P("results","2026-l1-final-1st_marked.mov"),
-            [P("results","whistles.txt"), P("labels","ground_truth.tsv")]),
-    "2nd": (P("data","2026-l1-final-2nd.mov"), P("results","2026-l1-final-2nd_marked.mov"),
-            [P("labels","ground_truth_2nd.tsv")]),
-}
 
 def read_times(path):
     """秒(2列目)を返す。label列(4列目)がある場合は whistle のみ採用。
@@ -48,8 +38,9 @@ def make(src_mov, out_mov, label_files):
         if not merged or t - merged[-1] >= 1.0: merged.append(t)
     times = merged
     end = mov_duration(src_mov)
-    ffmeta = os.path.join(os.path.dirname(out_mov), "chapters_"+
-             os.path.basename(out_mov).replace("_marked.mov","")+".ffmeta")
+    base = os.path.splitext(os.path.basename(out_mov))[0]
+    if base.endswith("_marked"): base = base[:-len("_marked")]
+    ffmeta = os.path.join(os.path.dirname(out_mov), "chapters_"+base+".ffmeta")
     with open(ffmeta, "w") as f:
         f.write(";FFMETADATA1\n")
         f.write(f"[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND={int(round(times[0]*1000))-1}\ntitle=開始\n")
@@ -65,8 +56,6 @@ def make(src_mov, out_mov, label_files):
 
 if __name__ == "__main__":
     a = sys.argv[1:]
-    if not a:                      make(*PRESETS["1st"])
-    elif a[0] in PRESETS:          make(*PRESETS[a[0]])
-    elif len(a) >= 3:              make(a[0], a[1], a[2:])
-    else:
-        print("usage: make_chapters.py [1st|2nd | <src.mov> <out.mov> <labels.tsv>...]"); sys.exit(1)
+    if len(a) < 3:
+        sys.exit("使い方: python3 make_chapters.py <src.mov> <out.mov> <labels1.tsv> [labels2.tsv ...]")
+    make(a[0], a[1], a[2:])

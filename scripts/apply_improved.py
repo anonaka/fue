@@ -36,9 +36,9 @@ def select_threshold(X1,y1,t1,gt1,longs1):
         if F>best[1]: best=(thr,F)
     return best
 
-def main(src, out=None):
-    w1=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    gt1=gt_whistles(os.path.join(ROOT,"labels","ground_truth.tsv"))
+def main(src, train_wav, train_gt, out=None):
+    w1=train_wav
+    gt1=gt_whistles(train_gt)
     print("前半 学習中...",file=sys.stderr)
     c1=D.candidates(w1); m1,f1=V2.spectrogram(V2.load(w1))
     X1=np.array([C.feats(m1,f1,t) for t,_,_,_ in c1])
@@ -68,9 +68,9 @@ def main(src, out=None):
 
     if out is None:
         base=os.path.splitext(os.path.basename(src))[0]
-        out=os.path.join(ROOT,"results","whistles_%s.tsv"%base)
+        out=os.path.join(os.path.dirname(src),"whistles_%s.tsv"%base)
     with open(out,"w") as fo:
-        fo.write("# 改良版(長笛運用)を適用した自動検出。学習=2026 L1 final 1st, p>=%.2f。正解なし。\n"%thr)
+        fo.write("# 改良版(長笛運用)を適用した自動検出。学習=%s, p>=%.2f。正解なし。\n"%(os.path.basename(train_wav),thr))
         fo.write("# mm:ss\tseconds\tf0(Hz)\tlabel\tverified\tnote\n")
         for t,f0,pr in det:
             mm,ss=int(t//60),t%60
@@ -78,5 +78,5 @@ def main(src, out=None):
     print("出力: %s (%d件)"%(out,len(det)))
 
 if __name__=="__main__":
-    if len(sys.argv)<2: sys.exit("usage: apply_improved.py <in.wav|in.mov> [out.tsv]")
-    main(sys.argv[1], sys.argv[2] if len(sys.argv)>2 else None)
+    if len(sys.argv)<4: sys.exit("使い方: python3 apply_improved.py <apply.wav|mov> <train.wav> <train_gt.tsv> [out.tsv]")
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4] if len(sys.argv)>4 else None)

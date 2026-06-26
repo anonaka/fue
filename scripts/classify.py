@@ -56,9 +56,8 @@ def logreg_cv(X,y,k=5,l2=1.0,it=2000,lr=0.3):
         Xe=np.c_[np.ones(len(te)),Xs[te]]; oof[te]=1/(1+np.exp(-Xe@w))
     return oof
 
-def main():
-    path=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-    gt=E.load_gt()
+def main(path, gt_path):
+    gt=E.load_gt(gt_path)
     cand=D.candidates(path); ctimes=[c[0] for c in cand]
     print(f"候補 {len(cand)}個 / 正解 {len(gt)}個",file=sys.stderr)
     x=V2.load(path); mag,freqs=V2.spectrogram(x)
@@ -84,4 +83,6 @@ def main():
     print("\n特徴の係数(正=笛らしさ↑):")
     for nm,c in sorted(zip(names,w[1:]),key=lambda z:-abs(z[1])): print(f"  {nm:10s} {c:+.2f}")
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    if len(sys.argv)<3: sys.exit("使い方: python3 classify.py <input.wav> <ground_truth.tsv>")
+    main(sys.argv[1], sys.argv[2])

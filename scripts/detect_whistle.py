@@ -7,13 +7,13 @@
 
 両者の候補を合議スコア(各検出器での「上限−順位」を加算。両方に出れば加算され優先)で
 グローバルにランク付けして返す。両方一致の候補ほど高信頼。出力は「検証すべき候補」で、
-最終確定は人手確認が要る。確定した笛/誤検出は labels/ground_truth.tsv に蓄積する。
+最終確定は人手確認が要る。確定した笛/誤検出は labels/ground_truth_<試合>.tsv に蓄積する。
 
-正解データ(labels/ground_truth.tsv)での動作点 (許容±4s, この試合=笛48個):
-  N=15 → precision100% recall31% / N=30 → P73% R46%(F1最良) / N=120 → P36% R90%
+正解データ(2026-l1-final-1st)での動作点 (許容±4s, この試合=笛47個):
+  N=15 → precision100% recall32% / N=30 → P73% R47%(F1最良) / N=120 → P35% R89%
 Nを上げるほど再現率は上がるが誤検出が増える。用途に応じてNを選ぶ。
 
-使い方:  python3 detect_whistle.py [input.wav] [N]   (既定 N=30)
+使い方:  python3 detect_whistle.py <input.wav> [N]   (既定 N=30)
 """
 import sys, os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -43,7 +43,8 @@ def detect(path, topn=30):
     return candidates(path)[:topn]
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(ROOT, "data", "2026-l1-final-1st.wav")
+    if len(sys.argv) < 2: sys.exit("使い方: python3 detect_whistle.py <input.wav> [N]")
+    path = sys.argv[1]
     n = int(sys.argv[2]) if len(sys.argv) > 2 else 30
     print("# mm:ss\tseconds\tf0(Hz)\tscore\tsources")
     for t, f0, sc, src in detect(path, n):

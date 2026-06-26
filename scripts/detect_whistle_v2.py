@@ -14,6 +14,9 @@ SR, NFFT, HOP = 24000, 1024, 512
 FPS = SR/HOP
 SUSTAIN = 0.10   # 短い笛も拾えるよう短く
 
+# 進捗通知フック（呼び出し側が PROGRESS = func(done, total) を設定）
+PROGRESS = None
+
 def load(path):
     raw=subprocess.run(["ffmpeg","-v","error","-i",path,"-ac","1","-ar",str(SR),
                         "-f","s16le","-"],capture_output=True).stdout
@@ -22,7 +25,10 @@ def load(path):
 def spectrogram(x):
     win=np.hanning(NFFT).astype(np.float32); nf=1+(len(x)-NFFT)//HOP
     freqs=np.fft.rfftfreq(NFFT,1/SR); mag=np.empty((nf,len(freqs)),np.float32)
-    for i in range(nf): mag[i]=np.abs(np.fft.rfft(x[i*HOP:i*HOP+NFFT]*win))
+    for i in range(nf):
+        mag[i]=np.abs(np.fft.rfft(x[i*HOP:i*HOP+NFFT]*win))
+        if PROGRESS is not None and (i & 0x3FF)==0: PROGRESS(i,nf)
+    if PROGRESS is not None: PROGRESS(nf,nf)
     return mag,freqs
 
 def movmean(v,win):
@@ -70,7 +76,8 @@ def detect(path,topn=25):
     return [(tt,ff,pts,nd) for tt,pts,nd,ff in final[:topn]]
 
 if __name__=="__main__":
-    path=sys.argv[1] if len(sys.argv)>1 else os.path.join(ROOT,"data","2026-l1-final-1st.wav")
+    if len(sys.argv)<2: sys.exit("使い方: python3 detect_whistle_v2.py <input.wav> [N]")
+    path=sys.argv[1]
     topn=int(sys.argv[2]) if len(sys.argv)>2 else 25
     print("# mm:ss\tseconds\tf0(Hz)")
     for tt,ff,pts,nd in sorted(detect(path,topn),key=lambda r:r[0]):

@@ -1,0 +1,46 @@
+# 笛の正解データ (ground truth) — video-comment-system から書き出し (試合: 不惑黄色, YouTube xYn5CdyJkWs)
+# label: whistle=笛 / not_whistle=誤検出。 note: detected+human=検出一致 / human_only=人手のみ(検出なし) / review=要確認
+# mm:ss	seconds	f0(Hz)	label	verified	note
+0:09.28	9.28	-	whistle	human_ear	human_only
+0:52.80	52.80	-	whistle	human_ear	human_only
+1:41.08	101.08	-	whistle	human_ear	human_only
+2:13.40	133.40	-	whistle	human_ear	human_only
+2:23.97	143.97	-	whistle	human_ear	human_only
+2:50.00	170.00	-	whistle	human_ear	human_only
+4:58.38	298.38	-	whistle	human_ear	human_only
+5:44.92	344.92	-	whistle	human_ear	human_only
+5:59.98	359.98	-	whistle	human_ear	human_only
+7:23.90	443.90	-	whistle	human_ear	human_only
+8:10.52	490.52	-	whistle	human_ear	human_only
+9:37.70	577.70	-	whistle	human_ear	human_only
+9:55.40	595.40	-	whistle	human_ear	human_only
+10:37.10	637.10	-	whistle	human_ear	human_only
+11:20.39	680.39	-	whistle	human_ear	human_only
+12:05.48	725.48	-	whistle	human_ear	human_only
+13:00.24	780.24	-	whistle	human_ear	human_only
+13:44.53	824.53	-	whistle	human_ear	human_only
+14:19.78	859.78	-	whistle	human_ear	human_only
+14:38.72	878.72	-	whistle	human_ear	human_only
+15:07.16	907.16	-	whistle	human_ear	human_only
+15:38.26	938.26	-	whistle	human_ear	human_only
+17:02.07	1022.07	-	whistle	human_ear	human_only
+17:04.01	1024.01	-	whistle	human_ear	human_only
+17:18.20	1038.20	-	whistle	human_ear	human_only
+18:04.49	1084.49	-	whistle	human_ear	human_only
+18:35.82	1115.82	-	whistle	human_ear	human_only
+19:15.85	1155.85	-	whistle	human_ear	human_only
+20:10.48	1210.48	-	whistle	human_ear	human_only
+21:10.93	1270.93	-	whistle	human_ear	human_only
+22:04.42	1324.42	-	whistle	human_ear	human_only
+23:43.16	1423.16	-	whistle	human_ear	human_only
+23:53.90	1433.90	-	whistle	human_ear	human_only
+26:27.25	1587.25	-	whistle	human_ear	human_only
+27:57.72	1677.72	-	whistle	human_ear	human_only
+28:37.32	1717.32	-	whistle	human_ear	human_only
+29:11.40	1751.40	-	whistle	human_ear	human_only
+29:57.77	1797.77	-	whistle	human_ear	human_only
+30:53.99	1853.99	-	whistle	human_ear	human_only
+31:41.23	1901.23	-	whistle	human_ear	human_only
+32:06.58	1926.58	-	whistle	human_ear	human_only
+32:39.95	1959.95	-	whistle	human_ear	human_only
+32:44.69	1964.69	-	whistle	human_ear	human_only

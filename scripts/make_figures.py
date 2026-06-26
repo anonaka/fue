@@ -8,8 +8,6 @@ sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import detect_whistle as D, detect_whistle_v2 as V2, classify as CL, evaluate as E
 import classify_generalize as CG
 
-W1=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
-W2=os.path.join(ROOT,"data","2026-l1-final-2nd.wav")
 FIG=os.path.join(ROOT,"docs","figs")
 FEAT=["prom","tonal","h_ratio","h2/1","h3/1","low_r","high_r","pitch_std","dur","onset","flat"]
 
@@ -25,11 +23,11 @@ def save(fig,name):
     for ext in ("png","pdf"): fig.savefig(os.path.join(FIG,name+"."+ext),bbox_inches="tight",dpi=150)
     plt.close(fig); print("  ",name)
 
-def main():
-    gt1=CG.gt_whistles(os.path.join(ROOT,"labels","ground_truth.tsv"))
-    gt2=CG.gt_whistles(os.path.join(ROOT,"labels","ground_truth_2nd.tsv"))
-    print("前半読込...",file=sys.stderr); c1,X1,y1=CG.load_set(W1,gt1)
-    print("後半読込...",file=sys.stderr); c2,X2,y2=CG.load_set(W2,gt2)
+def main(w1, gt1_path, w2, gt2_path):
+    gt1=CG.gt_whistles(gt1_path)
+    gt2=CG.gt_whistles(gt2_path)
+    print("前半読込...",file=sys.stderr); c1,X1,y1=CG.load_set(w1,gt1)
+    print("後半読込...",file=sys.stderr); c2,X2,y2=CG.load_set(w2,gt2)
     t1=[c[0] for c in c1]; t2=[c[0] for c in c2]
     oof=CL.logreg_cv(X1,y1)                 # 前半 交差検証スコア
     w,mu,sd=CG.train(X1,y1)                  # 前半 全データ学習(汎化用・係数用)
@@ -75,4 +73,6 @@ def main():
     print(f"\nbaseline 1st F1max={b1[3].max():.2f} / classifier 1st F1max={k1[3].max():.2f}",file=sys.stderr)
     print(f"baseline 2nd F1max={b2[3].max():.2f} / classifier 2nd F1max={k2[3].max():.2f}",file=sys.stderr)
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    if len(sys.argv)<5: sys.exit("使い方: python3 make_figures.py <train.wav> <train_gt.tsv> <test.wav> <test_gt.tsv>")
+    main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])

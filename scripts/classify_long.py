@@ -57,10 +57,9 @@ def ridge_candidates(mag,freqs,topn=120):
         if len(out)>=topn: break
     return out
 
-def main():
-    path=os.path.join(ROOT,"data","2026-l1-final-1st.wav")
+def main(path, gt_path):
     x=V2.load(path); mag,freqs=V2.spectrogram(x)
-    gt=E.load_gt()
+    gt=E.load_gt(gt_path)
     # 正解の長さ→長い笛集合
     gdur={g:sustain(mag,freqs,g) for g in gt}
     longs=[g for g in gt if gdur[g]>=DUR_LONG]
@@ -123,4 +122,6 @@ def main():
     (b2),_=evaluate(union(rid_long), add_dur=True, gate=0.0)
     print(f"+長ridgeのみ +持続長特徴 (本命)         : F1最良 {b2[3]*100:.0f}%  (N={b2[0]} P{b2[1]*100:.0f}/R{b2[2]*100:.0f})")
 
-if __name__=="__main__": main()
+if __name__=="__main__":
+    if len(sys.argv)<3: sys.exit("使い方: python3 classify_long.py <input.wav> <ground_truth.tsv>")
+    main(sys.argv[1], sys.argv[2])
