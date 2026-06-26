@@ -23,12 +23,14 @@ FPS = SR / HOP
 
 # 既定パラメータ(cross-validation で最適化する。下記は探索の初期値)
 DEFAULTS = dict(
+    # 既定はアマチュア試合(rakuwaku 黄/赤)の CV で検証した設定。
     band_lo=1150.0,    # 笛帯域下限(低f0の笛~1250Hzを拾う)
-    band_hi=3300.0,    # 上限(高f0~2600 + 一部~3100をカバー)
-    bg_sec=6.0,        # 行背景の移動中央値の窓(笛の持続では動かない長さ)
-    sustain_sec=0.08,  # 時間平滑(細く持続する横線を要求, 単発スパイクを抑制)
-    pct=99.0,          # イベント抽出のスコア閾値パーセンタイル
+    band_hi=2700.0,    # 上限(高f0~2600 をカバー。3300は雑音増で不採用)
+    bg_sec=8.0,        # 行背景の移動中央値の窓(笛の持続では動かない長さ)
+    sustain_sec=0.10,  # 時間平滑(細く持続する横線を要求, 単発スパイクを抑制)
+    pct=98.5,          # イベント抽出のスコア閾値パーセンタイル
     gap=0.6,           # 近接ピーク統合(秒)
+    side_penalty=2.0,  # ステレオ centering: 横(side)に片寄るフレーム(横の掛け声)を減点する強さ
 )
 
 PROGRESS = None
@@ -37,6 +39,14 @@ def load(path):
     raw = subprocess.run(["ffmpeg","-v","error","-i",path,"-ac","1","-ar",str(SR),
                           "-f","s16le","-"], capture_output=True).stdout
     return np.frombuffer(raw, dtype="<i2").astype(np.float32)/32768.0
+
+def load_stereo(path):
+    """ステレオで読み mid=(L+R)/2(=mono と同じ), side=(L-R)/2 を返す。
+    mono/疑似ステレオ音源なら side≈0 になり centering は無影響。"""
+    raw = subprocess.run(["ffmpeg","-v","error","-i",path,"-ac","2","-ar",str(SR),
+                          "-f","s16le","-"], capture_output=True).stdout
+    a = np.frombuffer(raw, dtype="<i2").astype(np.float32).reshape(-1, 2)/32768.0
+    return (a[:,0]+a[:,1])/2, (a[:,0]-a[:,1])/2
 
 def spectrogram(x):
     win = np.hanning(NFFT).astype(np.float32); nf = 1+(len(x)-NFFT)//HOP
@@ -99,6 +109,18 @@ def ridge_score(mag, freqs, p):
     score = score / (1.0 + low_ratio)
     return score, band_f[ridge.argmax(axis=1)]
 
+def _centering(mag, side_mag, freqs, p):
+    """ステレオ centering の重み (T,)。横(side)成分が多いフレーム(=横の観客の掛け声)を減点する。
+    主審の笛はカメラ正面=中央(mid)で side≈小→温存、観客は横で side大→減点。mono なら side≈0→重み≈1。
+    アマチュア実測: 笛の mid/side≈10 / 掛け声≈3.6。クロス試合で recall上限+ , F1 +5〜7pt を確認。"""
+    wsel = (freqs >= p["band_lo"]) & (freqs <= p["band_hi"])
+    n = min(mag.shape[0], side_mag.shape[0])
+    w = np.ones(mag.shape[0])
+    mid_b = mag[:n, wsel].sum(1) + 1e-9
+    side_b = side_mag[:n, wsel].sum(1)
+    w[:n] = 1.0 / (1.0 + p["side_penalty"] * (side_b / mid_b))
+    return w
+
 def _events(score, t, pct, gap):
     thr = np.percentile(score, pct); hot = np.where(score>thr)[0]; ev=[]
     if len(hot):
@@ -112,15 +134,25 @@ def _events(score, t, pct, gap):
         k=a+score[a:b+1].argmax(); out.append((t[k], score[k]))
     return out
 
-def candidates(path=None, params=None, mag=None, freqs=None):
-    """ridge スコアのピークを候補として返す: [(time, f0, score), ...] 高score順。
-    mag/freqs を渡すと再計算を省く(CVで使い回す)。"""
-    p = dict(DEFAULTS);
+def candidates(path=None, params=None, mag=None, freqs=None, side_mag=None):
+    """ridge スコア(+ステレオ centering)のピークを候補として返す: [(time, f0, score), ...] 高score順。
+    path から読む場合はステレオで読み、横に片寄る掛け声を減点する(side_penalty)。
+    mag/freqs を渡すと再計算を省く(CVで使い回す); その際 side_mag も渡せば centering を効かせる。"""
+    p = dict(DEFAULTS)
     if params: p.update(params)
     if mag is None:
-        x=load(path); mag,freqs=spectrogram(x)
+        mid, side = load_stereo(path)
+        mag, freqs = spectrogram(mid)
+        global PROGRESS
+        _saved, PROGRESS = PROGRESS, None   # side のスペクトログラムは進捗に出さない
+        try:
+            side_mag, _ = spectrogram(side)
+        finally:
+            PROGRESS = _saved
     t=np.arange(mag.shape[0])/FPS
     score, peakf = ridge_score(mag, freqs, p)
+    if side_mag is not None and p.get("side_penalty", 0) > 0:
+        score = score * _centering(mag, side_mag, freqs, p)
     ev=_events(score, t, p["pct"], p["gap"])
     out=[]
     for tt, sc in ev:
